@@ -3,7 +3,6 @@ import java.util.*;
 
 public class BitStreamWriter
 {
-	private static final boolean LITTLE_ENDIAN = true;
 	private OutputStream out;
 	private int buffer;
 	private int buflen;
@@ -18,15 +17,9 @@ public class BitStreamWriter
 	private void reserve () throws IOException
 	{
 		while (buflen >= 8) {
-			if (LITTLE_ENDIAN) {
-				out.write(buffer);
-				buffer >>>= 8;
-				buflen -= 8;
-			} else {
-				buflen -= 8;
-				out.write(buffer >>> buflen);
-				buffer &= (1 << buflen) - 1;
-			}
+			buflen -= 8;
+			out.write(buffer >>> buflen);
+			buffer &= (1 << buflen) - 1;
 		}
 	}
 
@@ -37,7 +30,7 @@ public class BitStreamWriter
 	{
 		reserve();
 		if (buflen > 0)
-			out.write(buffer);
+			out.write(buffer << (8 - buflen));
 		buflen = 0;
 	}
 
@@ -59,10 +52,7 @@ public class BitStreamWriter
 	{
 		assert bit == 0 || bit == 1;
 		reserve();
-		if (LITTLE_ENDIAN)
-			buffer |= bit << buflen;
-		else
-			buffer = (buffer << 1) | bit;
+		buffer = (buffer << 1) | bit;
 		buflen ++;
 	}
 
@@ -72,10 +62,7 @@ public class BitStreamWriter
 		while (n > 0) {
 			reserve();
 			int towrite = Math.min(32 - buflen, n);
-			if (LITTLE_ENDIAN) {
-			} else {
-				buffer <<= towrite;
-			}
+			buffer <<= towrite;
 			buflen += towrite;
 			n -= towrite;
 		}
@@ -86,10 +73,7 @@ public class BitStreamWriter
 		assert bits >= 0 && bits <= 32;
 		assert buflen + bits <= 32;
 		assert (n & ~ ((1 << bits) - 1)) == 0;
-		if (LITTLE_ENDIAN)
-			buffer |= n << buflen;
-		else
-			buffer = (buffer << bits) | n;
+		buffer = (buffer << bits) | n;
 		buflen += bits;
 	}
 
@@ -101,15 +85,9 @@ public class BitStreamWriter
 		if (bits <= 32 - buflen) {
 			writeFixedIntUnchecked(n, bits);
 		} else {
-			if (LITTLE_ENDIAN) {
-				writeFixedIntUnchecked(n & 0xff, 8);
-				reserve();
-				writeFixedIntUnchecked(n >>> 8, bits - 8);
-			} else {
-				writeFixedIntUnchecked(n >>> 8, bits - 8);
-				reserve();
-				writeFixedIntUnchecked(n & 0xff, 8);
-			}
+			writeFixedIntUnchecked(n >>> 8, bits - 8);
+			reserve();
+			writeFixedIntUnchecked(n & 0xff, 8);
 		}
 	}
 

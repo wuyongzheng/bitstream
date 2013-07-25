@@ -3,7 +3,6 @@ import java.util.*;
 
 public class BitStreamReader
 {
-	private static final boolean LITTLE_ENDIAN = true;
 	private InputStream in;
 	private int buffer;
 	private int buflen;
@@ -21,10 +20,7 @@ public class BitStreamReader
 			int n = in.read();
 			if (n == -1)
 				throw new EOFException();
-			if (LITTLE_ENDIAN)
-				buffer |= n << buflen;
-			else
-				buffer = (buffer << 8) | n;
+			buffer = (buffer << 8) | n;
 			buflen += 8;
 		}
 	}
@@ -33,14 +29,8 @@ public class BitStreamReader
 	{
 		reserve(1);
 		boolean retval;
-		if (LITTLE_ENDIAN) {
-			retval = (buffer & 1) != 0;
-			buffer >>>= 1;
-			buflen --;
-		} else {
-			retval = (buffer >>> (-- buflen)) != 0;
-			buffer &= (1 << buflen) - 1;
-		}
+		retval = (buffer >>> (-- buflen)) != 0;
+		buffer &= (1 << buflen) - 1;
 		return retval;
 	}
 
@@ -48,15 +38,9 @@ public class BitStreamReader
 	{
 		assert bits > 0 && buflen >= bits;
 		int retval;
-		if (LITTLE_ENDIAN) {
-			retval = bits == 32 ? buffer : buffer & ((1 << bits) - 1);
-			buffer >>>= bits;
-			buflen -= bits;
-		} else {
-			retval = buffer >>> (buflen - bits);
-			buflen -= bits;
-			buffer &= (1 << buflen) - 1;
-		}
+		retval = buffer >>> (buflen - bits);
+		buflen -= bits;
+		buffer &= (1 << buflen) - 1;
 		return retval;
 	}
 
@@ -72,15 +56,9 @@ public class BitStreamReader
 			return readFixedIntUnchecked(bits);
 		} else {
 			int retval;
-			if (LITTLE_ENDIAN) {
-				retval = readFixedIntUnchecked(8);
-				reserve(bits - 8);
-				retval |= readFixedIntUnchecked(bits - 8) << 8;
-			} else {
-				retval = readFixedIntUnchecked(bits - 8) << 8;
-				reserve(8);
-				retval |= readFixedIntUnchecked(8);
-			}
+			retval = readFixedIntUnchecked(bits - 8) << 8;
+			reserve(8);
+			retval |= readFixedIntUnchecked(8);
 			return retval;
 		}
 	}
