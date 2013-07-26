@@ -4,18 +4,18 @@ public class Test {
 	private static void testEmpty () throws Exception
 	{
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		BitStreamWriter writer = new BitStreamWriter(out);
+		BitOutputStream writer = new BitOutputStream(out);
 		writer.close();
 		assert out.size() == 0;
 
 		ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
-		BitStreamReader reader = new BitStreamReader(in);
+		BitInputStream reader = new BitInputStream(in);
 	}
 
 	private static void testAll () throws Exception
 	{
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		BitStreamWriter writer = new BitStreamWriter(out);
+		BitOutputStream writer = new BitOutputStream(out);
 		writer.writeBoolean(true);
 		writer.writeZeros(2);
 		writer.writeBoolean(false);
@@ -51,7 +51,7 @@ public class Test {
 		}
 
 		ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
-		BitStreamReader reader = new BitStreamReader(in);
+		BitInputStream reader = new BitInputStream(in);
 		assert reader.readBoolean() == true;
 		assert reader.readBoolean() == false;
 		assert reader.readBoolean() == false;

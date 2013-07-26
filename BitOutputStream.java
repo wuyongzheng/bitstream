@@ -1,13 +1,13 @@
 import java.io.*;
 import java.util.*;
 
-public class BitStreamWriter
+public class BitOutputStream extends OutputStream
 {
 	private OutputStream out;
 	private int buffer;
 	private int buflen;
 
-	public BitStreamWriter (OutputStream out)
+	public BitOutputStream (OutputStream out)
 	{
 		this.out = out;
 	}
@@ -25,7 +25,7 @@ public class BitStreamWriter
 
 	/** Write the remaining buffer to the underlying OutputStream.
 	 * 0s are padded to byte boundary.
-	 * The reader has to call sync as well, or create a new reader from this point.
+	 * The reader has to call sync as well.
 	 * */
 	public void sync () throws IOException
 	{
@@ -36,7 +36,43 @@ public class BitStreamWriter
 		}
 	}
 
-	/** Equivlent to call sync() and close the underlying OutputStream.
+	/** Calls flush() of undrelying OutputStream.
+	 * <strong>Note that it does not flush the internal buffer to the undrelying OutputStream.</strong>
+	 * To write the buffer to the undrelying OutputStream, call sync().
+	 * Calling sync() then flush() is probably what you want.
+	 * The reason it's designed this way is because flushing the internal
+	 * buffer may pad bits, which is different from the traditional flush() semantics.
+	 * */
+	public void flush () throws IOException
+	{
+		out.flush();
+	}
+
+	/** Call sync() and then write b to the underlying OutputStream.
+	 * */
+	public void write (int b) throws IOException
+	{
+		sync();
+		out.write(b);
+	}
+
+	/** Call sync() and then write b to the underlying OutputStream.
+	 * */
+	public void write (byte[] b) throws IOException
+	{
+		sync();
+		out.write(b);
+	}
+
+	/** Call sync() and then write b to the underlying OutputStream.
+	 * */
+	public void write (byte[] b, int off, int len) throws IOException
+	{
+		sync();
+		out.write(b, off, len);
+	}
+
+	/** Call sync() and then close the underlying OutputStream.
 	 * */
 	public void close () throws IOException
 	{

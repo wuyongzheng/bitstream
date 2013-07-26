@@ -1,13 +1,15 @@
 import java.io.*;
 import java.util.*;
 
-public class BitStreamReader
+public class BitInputStream extends InputStream
 {
 	private InputStream in;
 	private int buffer;
 	private int buflen;
+	private int markBuffer;
+	private int markBuflen;
 
-	public BitStreamReader (InputStream in)
+	public BitInputStream (InputStream in)
 	{
 		this.in = in;
 	}
@@ -27,12 +29,64 @@ public class BitStreamReader
 	}
 
 	/** Discard the current internal buffer.
-	 * See BitStreamWriter.sync
+	 * See BitOutputStream.sync
 	 * */
 	public void sync ()
 	{
 		assert buffer == 0;
 		buflen = 0;
+	}
+
+	/** Call sync() and then call read() of the underlying InputStream */
+	public int read () throws IOException
+	{
+		sync();
+		return in.read();
+	}
+
+	/** Call sync() and then call read() of the underlying InputStream */
+	public int read (byte[] b) throws IOException
+	{
+		sync();
+		return in.read(b);
+	}
+
+	/** Call sync() and then call read() of the underlying InputStream */
+	public int read (byte[] b, int off, int len) throws IOException
+	{
+		sync();
+		return in.read(b, off, len);
+	}
+
+	/** Call sync() and then call skip() of the underlying InputStream */
+	public long skip (long n) throws IOException
+	{
+		sync();
+		return in.skip(n);
+	}
+
+	public int available () throws IOException
+	{
+		return in.available();
+	}
+
+	public void mark (int readlimit)
+	{
+		markBuffer = buffer;
+		markBuflen = buflen;
+		in.mark(readlimit);
+	}
+
+	public void reset () throws IOException
+	{
+		buffer = markBuffer;
+		buflen = markBuflen;
+		in.reset();
+	}
+
+	public boolean markSupported ()
+	{
+		return in.markSupported();
 	}
 
 	/** Close the underlying InputStream
@@ -155,7 +209,7 @@ public class BitStreamReader
 			boolean currbit = readBoolean();
 			if (currbit && prevbit)
 				break;
-			retval += currbit ? BitStreamWriter.fibSeries[fibn] : 0;
+			retval += currbit ? BitOutputStream.fibSeries[fibn] : 0;
 			prevbit = currbit;
 			fibn ++;
 		}
