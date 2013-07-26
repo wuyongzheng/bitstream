@@ -12,7 +12,8 @@ public class BitStreamReader
 		this.in = in;
 	}
 
-	// read from input until buflen >= bits
+	/** read from input until buflen >= bits
+	 * */
 	private void reserve (int bits) throws IOException
 	{
 		assert bits <= 25;
@@ -25,13 +26,51 @@ public class BitStreamReader
 		}
 	}
 
-	public boolean readBit () throws IOException
+	/** Discard the current internal buffer.
+	 * See BitStreamWriter.sync
+	 * */
+	public void sync ()
+	{
+		assert buffer == 0;
+		buflen = 0;
+	}
+
+	/** Close the underlying InputStream
+	 * */
+	public void close () throws IOException
+	{
+		in.close();
+		in = null;
+	}
+
+	/** Read a single bit.
+	 * @return 0 or 1
+	 * */
+	public int readBit () throws IOException
 	{
 		reserve(1);
-		boolean retval;
-		retval = (buffer >>> (-- buflen)) != 0;
+		int retval;
+		retval = buffer >>> (-- buflen);
 		buffer &= (1 << buflen) - 1;
 		return retval;
+	}
+
+	/** A convenient wrapper of readBit()
+	 * @return true is the bit is 1, false otherwise
+	 * */
+	public boolean readBoolean () throws IOException
+	{
+		return readBit() != 0;
+	}
+
+	/** read 0-based Unary code
+	 * */
+	public int readUnary () throws IOException
+	{
+		int bitcount = 0;
+		while (!readBoolean())
+			bitcount ++;
+		return bitcount;
 	}
 
 	private int readFixedIntUnchecked (int bits)
@@ -45,12 +84,13 @@ public class BitStreamReader
 	}
 
 	/**
-	 * @param bits 0 &lt; bits &le; 32
-	 * @return unsigned integer n (0 &lt; n &le; 2^bits-1). if bits=32, n can be negative.
+	 * @param bits 1 &le; bits &le; 31
+	 * @return positive integer n (0 &lt; n &le; 2^bits - 1).
 	 * */
 	public int readFixedInt (int bits) throws IOException
 	{
-		assert bits > 0 && bits <= 32;
+		if (bits < 1 || bits > 31)
+			throw new IllegalArgumentException("bits is not in the range of [1,31]. bits=" + bits);
 		reserve(Math.min(25, bits));
 		if (buflen >= bits) {
 			return readFixedIntUnchecked(bits);
@@ -64,22 +104,23 @@ public class BitStreamReader
 	}
 
 	/**
-	 * @return unsigned log n (1 &lt; n &le; 0xffffffff ffffffff)
+	 * @return n (1 &le; n &le; Long.MAX_VALUE)
 	 * */
 	public long readEliasGamma () throws IOException
 	{
 		int bitcount = 0;
-		while (!readBit())
+		while (!readBoolean())
 			bitcount ++;
-		assert bitcount < 64;
+		if (bitcount > 62)
+			throw new IllegalArgumentException("number too big to fit in long type"); //TODO: is there a better fit exception?
 		if (bitcount == 0) {
 			return 1;
-		} else if (bitcount <= 32) {
-			return (readFixedInt(bitcount) & 0xffffffffl) | (1l << bitcount);
+		} else if (bitcount <= 31) {
+			return readFixedInt(bitcount) | (1l << bitcount);
 		} else {
 			long retval = 1l << bitcount;
-			retval |= (readFixedInt(bitcount - 32) & 0xffffffffl) << 32l;
-			retval |= readFixedInt(32) & 0xffffffffl;
+			retval |= (long)readFixedInt(bitcount - 31) << 31;
+			retval |= readFixedInt(31);
 			return retval;
 		}
 	}
@@ -90,5 +131,35 @@ public class BitStreamReader
 	public long readExpGolomb0 () throws IOException
 	{
 		return readEliasGamma() - 1;
+	}
+
+	/** Exp-Golomb coding.
+	 * @param k  0 &le; k &le; 31
+	 * */
+	public long readExpGolombK (int k) throws IOException
+	{
+		if (k < 0 || k > 31)
+			throw new IllegalArgumentException("invalid k");
+		long n = readEliasGamma() - 1;
+		return k == 0 ? n : (n << k) | readFixedInt(k);
+	}
+
+	/** Fibonacci code.
+	 * */
+	public long readFibonacci () throws IOException
+	{
+		long retval = 0;
+		int fibn = 0;
+		boolean prevbit = false;
+		while (true) {
+			boolean currbit = readBoolean();
+			if (currbit && prevbit)
+				break;
+			retval += currbit ? BitStreamWriter.fibSeries[fibn] : 0;
+			prevbit = currbit;
+			fibn ++;
+		}
+		//System.out.println("readFibonacci() fibn=" + fibn);
+		return retval;
 	}
 }

@@ -5,7 +5,7 @@ public class Test {
 	{
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		BitStreamWriter writer = new BitStreamWriter(out);
-		writer.flush();
+		writer.close();
 		assert out.size() == 0;
 
 		ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
@@ -16,17 +16,30 @@ public class Test {
 	{
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		BitStreamWriter writer = new BitStreamWriter(out);
-		writer.writeBit(true);
+		writer.writeBoolean(true);
 		writer.writeZeros(2);
-		writer.writeBit(false);
+		writer.writeBoolean(false);
+		writer.writeUnary(0);
+		writer.writeUnary(5);
 		writer.writeFixedInt(100, 7);
 		writer.writeFixedInt(100000, 17);
 		writer.writeFixedInt(100000, 20);
 		writer.writeEliasGamma(1);
 		writer.writeEliasGamma(1000);
+		writer.writeEliasGamma(Integer.MAX_VALUE);
+		writer.writeEliasGamma(Integer.MAX_VALUE - 1000);
+		writer.writeEliasGamma(Long.MAX_VALUE);
+		writer.writeEliasGamma(Long.MAX_VALUE - 1000);
 		writer.writeExpGolomb0(3);
 		writer.writeExpGolomb0(3000);
-		writer.flush();
+		writer.writeFibonacci(3);
+		writer.writeFibonacci(3000);
+		writer.writeFibonacci(300000000);
+		writer.writeFibonacci(3000000000000l);
+		writer.writeFibonacci(Integer.MAX_VALUE);
+		writer.writeFibonacci(Long.MAX_VALUE);
+		writer.writeFibonacci(Long.MAX_VALUE - 1000);
+		writer.close();
 
 		{
 			byte [] arr = out.toByteArray();
@@ -39,17 +52,30 @@ public class Test {
 
 		ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
 		BitStreamReader reader = new BitStreamReader(in);
-		assert reader.readBit() == true;
-		assert reader.readBit() == false;
-		assert reader.readBit() == false;
-		assert reader.readBit() == false;
+		assert reader.readBoolean() == true;
+		assert reader.readBoolean() == false;
+		assert reader.readBoolean() == false;
+		assert reader.readBoolean() == false;
+		assert reader.readUnary() == 0;
+		assert reader.readUnary() == 5;
 		assert reader.readFixedInt(7) == 100;
 		assert reader.readFixedInt(17) == 100000;
 		assert reader.readFixedInt(20) == 100000;
 		assert reader.readEliasGamma() == 1;
 		assert reader.readEliasGamma() == 1000;
+		assert reader.readEliasGamma() == Integer.MAX_VALUE;
+		assert reader.readEliasGamma() == Integer.MAX_VALUE - 1000;
+		assert reader.readEliasGamma() == Long.MAX_VALUE;
+		assert reader.readEliasGamma() == Long.MAX_VALUE - 1000;
 		assert reader.readExpGolomb0() == 3;
 		assert reader.readExpGolomb0() == 3000;
+		assert reader.readFibonacci() == 3;
+		assert reader.readFibonacci() == 3000;
+		assert reader.readFibonacci() == 300000000;
+		assert reader.readFibonacci() == 3000000000000l;
+		assert reader.readFibonacci() == Integer.MAX_VALUE;
+		assert reader.readFibonacci() == Long.MAX_VALUE;
+		assert reader.readFibonacci() == Long.MAX_VALUE - 1000;
 	}
 
 	public static void main (String [] args) throws Exception
