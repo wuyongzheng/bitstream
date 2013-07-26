@@ -65,8 +65,8 @@ public class Test {
 		assert reader.readEliasGamma() == 1000;
 		assert reader.readEliasGamma() == Integer.MAX_VALUE;
 		assert reader.readEliasGamma() == Integer.MAX_VALUE - 1000;
-		assert reader.readEliasGamma() == Long.MAX_VALUE;
-		assert reader.readEliasGamma() == Long.MAX_VALUE - 1000;
+		assert reader.readEliasGammaLong() == Long.MAX_VALUE;
+		assert reader.readEliasGammaLong() == Long.MAX_VALUE - 1000;
 		assert reader.readExpGolomb0() == 3;
 		assert reader.readExpGolomb0() == 3000;
 		assert reader.readFibonacci() == 3;

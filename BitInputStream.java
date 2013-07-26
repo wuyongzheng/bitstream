@@ -14,7 +14,7 @@ public class BitInputStream extends InputStream
 		this.in = in;
 	}
 
-	/** read from input until buflen >= bits
+	/** read from input until buflen &ge; bits
 	 * */
 	private void reserve (int bits) throws IOException
 	{
@@ -158,9 +158,26 @@ public class BitInputStream extends InputStream
 	}
 
 	/**
+	 * @return n (1 &le; n &le; Integer.MAX_VALUE)
+	 * */
+	public int readEliasGamma () throws IOException
+	{
+		int bitcount = 0;
+		while (!readBoolean())
+			bitcount ++;
+		if (bitcount > 30)
+			throw new IllegalArgumentException("number too big to fit in int type"); //TODO: is there a better fit exception?
+		if (bitcount == 0) {
+			return 1;
+		} else {
+			return readFixedInt(bitcount) | (1 << bitcount);
+		}
+	}
+
+	/**
 	 * @return n (1 &le; n &le; Long.MAX_VALUE)
 	 * */
-	public long readEliasGamma () throws IOException
+	public long readEliasGammaLong () throws IOException
 	{
 		int bitcount = 0;
 		while (!readBoolean())
@@ -180,11 +197,19 @@ public class BitInputStream extends InputStream
 	}
 
 	/**
-	 * @return unsigned log n (0 &lt; n &le; 0xffffffff fffffffe)
+	 * @return n (0 &lt; n &le; Integer.MAX_VALUE - 1)
 	 * */
-	public long readExpGolomb0 () throws IOException
+	public int readExpGolomb0 () throws IOException
 	{
 		return readEliasGamma() - 1;
+	}
+
+	/**
+	 * @return n (0 &lt; n &le; Long.MAX_VALUE - 1)
+	 * */
+	public long readExpGolombLong0 () throws IOException
+	{
+		return readEliasGammaLong() - 1;
 	}
 
 	/** Exp-Golomb coding.
@@ -194,7 +219,7 @@ public class BitInputStream extends InputStream
 	{
 		if (k < 0 || k > 31)
 			throw new IllegalArgumentException("invalid k");
-		long n = readEliasGamma() - 1;
+		long n = readEliasGammaLong() - 1;
 		return k == 0 ? n : (n << k) | readFixedInt(k);
 	}
 
