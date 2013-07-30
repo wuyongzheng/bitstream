@@ -28,6 +28,15 @@ public class BitInputStream extends InputStream
 		}
 	}
 
+	/** Get the number of bits in the internal buffer.
+	 * The returned value is guaranteed to be within [0,7].
+	 * The returned value is always 0 if it is called immidiately after calling sync().
+	 * */
+	public int getBufferSize ()
+	{
+		return buflen;
+	}
+
 	/** Discard the current internal buffer.
 	 * See BitOutputStream.sync
 	 * */
@@ -207,7 +216,7 @@ public class BitInputStream extends InputStream
 	/**
 	 * @return n (0 &lt; n &le; Long.MAX_VALUE - 1)
 	 * */
-	public long readExpGolombLong0 () throws IOException
+	public long readExpGolomb0Long () throws IOException
 	{
 		return readEliasGammaLong() - 1;
 	}

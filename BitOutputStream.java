@@ -6,6 +6,7 @@ public class BitOutputStream extends OutputStream
 	private OutputStream out;
 	private int buffer;
 	private int buflen;
+	private int outcount;
 
 	public BitOutputStream (OutputStream out)
 	{
@@ -18,22 +19,34 @@ public class BitOutputStream extends OutputStream
 	{
 		while (buflen >= 8) {
 			buflen -= 8;
-			out.write(buffer >>> buflen);
+			out.write(buffer >>> buflen); outcount ++;
 			buffer &= (1 << buflen) - 1;
 		}
+	}
+
+	/** Get the number of bits in the internal buffer.
+	 * The returned value is guaranteed to be within [0,7].
+	 * The returned value is always 0 if it is called immidiately after calling sync().
+	 * */
+	public int getBufferSize () throws IOException
+	{
+		reserve();
+		return buflen;
 	}
 
 	/** Write the remaining buffer to the underlying OutputStream.
 	 * 0s are padded to byte boundary.
 	 * The reader has to call sync as well.
+	 * @return total bytes written.
 	 * */
-	public void sync () throws IOException
+	public int sync () throws IOException
 	{
 		reserve();
 		if (buflen > 0) {
-			out.write(buffer << (8 - buflen));
+			out.write(buffer << (8 - buflen)); outcount ++;
 			buffer = buflen = 0;
 		}
+		return outcount;
 	}
 
 	/** Calls flush() of undrelying OutputStream.
@@ -45,6 +58,7 @@ public class BitOutputStream extends OutputStream
 	 * */
 	public void flush () throws IOException
 	{
+		reserve();
 		out.flush();
 	}
 
@@ -53,7 +67,7 @@ public class BitOutputStream extends OutputStream
 	public void write (int b) throws IOException
 	{
 		sync();
-		out.write(b);
+		out.write(b); outcount ++;
 	}
 
 	/** Call sync() and then write b to the underlying OutputStream.
@@ -61,7 +75,7 @@ public class BitOutputStream extends OutputStream
 	public void write (byte[] b) throws IOException
 	{
 		sync();
-		out.write(b);
+		out.write(b); outcount += b.length;
 	}
 
 	/** Call sync() and then write b to the underlying OutputStream.
@@ -69,7 +83,7 @@ public class BitOutputStream extends OutputStream
 	public void write (byte[] b, int off, int len) throws IOException
 	{
 		sync();
-		out.write(b, off, len);
+		out.write(b, off, len); outcount += len;
 	}
 
 	/** Call sync() and then close the underlying OutputStream.
@@ -212,6 +226,16 @@ public class BitOutputStream extends OutputStream
 		//if (n < 0 || n == Long.MAX_VALUE - 1)
 		//	throw new IllegalArgumentException("n < 0 is not allowed in Exp-Golomb code");
 		writeEliasGamma(n + 1);
+	}
+
+	/** Exp-Golomb coding.
+	 * @param n  0 &le; n &le; Integer.MAX_VALUE - 1
+	 * @param k  0 &le; k &le; 31
+	 * */
+	public void writeExpGolombK (int n, int k) throws IOException
+	{
+		writeEliasGamma((n >>> k) + 1);
+		writeFixedInt((int)n, k);
 	}
 
 	/** Exp-Golomb coding.
