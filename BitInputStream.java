@@ -205,6 +205,21 @@ public class BitInputStream extends InputStream
 		}
 	}
 
+	/** An variation of Elias Gamma coding which allows negative values.
+	 * EliasGammaAlt(0)  = EliasGamma(1)
+	 * EliasGammaAlt(1)  = EliasGamma(2)
+	 * EliasGammaAlt(-1) = EliasGamma(3)
+	 * EliasGammaAlt(2)  = EliasGamma(4)
+	 * EliasGammaAlt(-2) = EliasGamma(5)
+	 * */
+	public int readEliasGammaAlt () throws IOException
+	{
+		int n = readEliasGamma();
+		if (n == 1)
+			return 0;
+		return n % 2 == 0 ? n/2 : -(n/2);
+	}
+
 	/**
 	 * @return n (0 &lt; n &le; Integer.MAX_VALUE - 1)
 	 * */
@@ -234,9 +249,9 @@ public class BitInputStream extends InputStream
 
 	/** Fibonacci code.
 	 * */
-	public long readFibonacci () throws IOException
+	public int readFibonacci () throws IOException
 	{
-		long retval = 0;
+		int retval = 0;
 		int fibn = 0;
 		boolean prevbit = false;
 		while (true) {
@@ -247,7 +262,24 @@ public class BitInputStream extends InputStream
 			prevbit = currbit;
 			fibn ++;
 		}
-		//System.out.println("readFibonacci() fibn=" + fibn);
+		return retval;
+	}
+
+	/** Fibonacci code.
+	 * */
+	public long readFibonacciLong () throws IOException
+	{
+		long retval = 0;
+		int fibn = 0;
+		boolean prevbit = false;
+		while (true) {
+			boolean currbit = readBoolean();
+			if (currbit && prevbit)
+				break;
+			retval += currbit ? BitOutputStream.fibSeriesLong[fibn] : 0;
+			prevbit = currbit;
+			fibn ++;
+		}
 		return retval;
 	}
 }

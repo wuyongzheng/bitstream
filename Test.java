@@ -72,10 +72,10 @@ public class Test {
 		assert reader.readFibonacci() == 3;
 		assert reader.readFibonacci() == 3000;
 		assert reader.readFibonacci() == 300000000;
-		assert reader.readFibonacci() == 3000000000000l;
+		assert reader.readFibonacciLong() == 3000000000000l;
 		assert reader.readFibonacci() == Integer.MAX_VALUE;
-		assert reader.readFibonacci() == Long.MAX_VALUE;
-		assert reader.readFibonacci() == Long.MAX_VALUE - 1000;
+		assert reader.readFibonacciLong() == Long.MAX_VALUE;
+		assert reader.readFibonacciLong() == Long.MAX_VALUE - 1000;
 	}
 
 	public static void main (String [] args) throws Exception

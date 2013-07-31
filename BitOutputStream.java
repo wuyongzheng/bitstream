@@ -208,6 +208,24 @@ public class BitOutputStream extends OutputStream
 		}
 	}
 
+	/** An variation of Elias Gamma coding which allows negative values.
+	 * EliasGammaAlt(0)  = EliasGamma(1)
+	 * EliasGammaAlt(1)  = EliasGamma(2)
+	 * EliasGammaAlt(-1) = EliasGamma(3)
+	 * EliasGammaAlt(2)  = EliasGamma(4)
+	 * EliasGammaAlt(-2) = EliasGamma(5)
+	 * @param n  -(Integer.MAX_VALUE-1)/2 = -1073741823 &le; n &le; 1073741823 = (Integer.MAX_VALUE-1)/2
+	 * */
+	public void writeEliasGammaAlt (int n) throws IOException
+	{
+		if (n < -(Integer.MAX_VALUE-1)/2 || n > (Integer.MAX_VALUE-1)/2)
+			throw new IllegalArgumentException("n = " + n + " is not allowed in EliasGammaAlt");
+		if (n == 0)
+			writeBit(1);
+		else
+			writeEliasGamma(n > 0 ? n * 2 : -n * 2 + 1);
+	}
+
 	/** Exp-Golomb k=0 coding.
 	 * @param n  0 &le; n &le; Integer.MAX_VALUE - 1
 	 * */
@@ -248,7 +266,59 @@ public class BitOutputStream extends OutputStream
 		writeFixedInt((int)n, k);
 	}
 
-	static final long [] fibSeries = {
+	static final int [] fibSeries = {
+		1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584,
+		4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811,
+		514229, 832040, 1346269, 2178309, 3524578, 5702887, 9227465, 14930352,
+		24157817, 39088169, 63245986, 102334155, 165580141, 267914296,
+		433494437, 701408733, 1134903170, 1836311903};
+
+	/** Fibonacci code.
+	 * @param n 1 &le; n &le; Integer.MAX_VALUE
+	 * */
+	public void writeFibonacci (int n) throws IOException
+	{
+		if (n <= 0)
+			throw new IllegalArgumentException("n <= 0 is not allowed in Fibonacci code");
+		int fibn = 0;
+		{
+			int low = 0, high = fibSeries.length - 1;
+			while (low < high) {
+				int mid = (low + high + 1) / 2;
+				if (n < fibSeries[mid])
+					high = mid - 1;
+				else
+					low = mid;
+			}
+			fibn = low;
+		} // now fibSeries[fibn] is the largest fib number that is <= n.
+		//System.out.println("writeFibonacci() fibn=" + fibn);
+
+		/* we cut it into maximum 2 chunks, each 31 bits.
+		 * |0... buf0 ...30|31... buf1 ...61| */
+		int buf0 = 0, buf1 = 0;
+		for (int i = fibn; i >= 31; i --) {
+			if (n >= fibSeries[i]) {
+				n -= fibSeries[i];
+				buf1 |= 1 << (61 - i);
+				//System.out.println("set " + i + ":" + fibSeries[i]);
+			}
+		}
+		for (int i = Math.min(fibn, 30); i >= 0; i --) {
+			if (n >= fibSeries[i]) {
+				n -= fibSeries[i];
+				buf0 |= 1 << (30 - i);
+				//System.out.println("set " + i + ":" + fibSeries[i]);
+			}
+		}
+		assert n == 0;
+		writeFixedInt(buf0 >>> (31 - Math.min(31, fibn + 1)), Math.min(31, fibn + 1));
+		if (fibn >= 31)
+			writeFixedInt(buf1 >>> (61 - fibn), fibn - 30);
+		writeBit(1);
+	}
+
+	static final long [] fibSeriesLong = {
 		1l, 2l, 3l, 5l, 8l, 13l, 21l, 34l, 55l, 89l, 144l, 233l, 377l, 610l,
 		987l, 1597l, 2584l, 4181l, 6765l, 10946l, 17711l, 28657l, 46368l,
 		75025l, 121393l, 196418l, 317811l, 514229l, 832040l, 1346269l,
@@ -278,40 +348,40 @@ public class BitOutputStream extends OutputStream
 			throw new IllegalArgumentException("n <= 0 is not allowed in Fibonacci code");
 		int fibn = 0;
 		{
-			int low = 0, high = fibSeries.length - 1;
+			int low = 0, high = fibSeriesLong.length - 1;
 			while (low < high) {
 				int mid = (low + high + 1) / 2;
-				if (n < fibSeries[mid])
+				if (n < fibSeriesLong[mid])
 					high = mid - 1;
 				else
 					low = mid;
 			}
 			fibn = low;
-		} // now fibSeries[fibn] is the largest fib number that is <= n.
+		} // now fibSeriesLong[fibn] is the largest fib number that is <= n.
 		//System.out.println("writeFibonacci() fibn=" + fibn);
 
 		/* we cut it into maximum 3 chunks, each 31 bits.
 		 * |0... buf0 ...30|31... buf1 ...61|62... buf2 ...92| */
 		int buf0 = 0, buf1 = 0, buf2 = 0;
 		for (int i = fibn; i >= 62; i --) {
-			if (n >= fibSeries[i]) {
-				n -= fibSeries[i];
+			if (n >= fibSeriesLong[i]) {
+				n -= fibSeriesLong[i];
 				buf2 |= 1 << (92 - i);
-				//System.out.println("set " + i + ":" + fibSeries[i]);
+				//System.out.println("set " + i + ":" + fibSeriesLong[i]);
 			}
 		}
 		for (int i = Math.min(fibn, 61); i >= 31; i --) {
-			if (n >= fibSeries[i]) {
-				n -= fibSeries[i];
+			if (n >= fibSeriesLong[i]) {
+				n -= fibSeriesLong[i];
 				buf1 |= 1 << (61 - i);
-				//System.out.println("set " + i + ":" + fibSeries[i]);
+				//System.out.println("set " + i + ":" + fibSeriesLong[i]);
 			}
 		}
 		for (int i = Math.min(fibn, 30); i >= 0; i --) {
-			if (n >= fibSeries[i]) {
-				n -= fibSeries[i];
+			if (n >= fibSeriesLong[i]) {
+				n -= fibSeriesLong[i];
 				buf0 |= 1 << (30 - i);
-				//System.out.println("set " + i + ":" + fibSeries[i]);
+				//System.out.println("set " + i + ":" + fibSeriesLong[i]);
 			}
 		}
 		assert n == 0;
