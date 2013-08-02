@@ -1,6 +1,28 @@
 import java.io.*;
 import java.util.*;
 
+/** BitOutputStream allows bits to be written to an underlying OutputStream.
+ * Some universal code such as Elias Gamma code is implemented for convenience.
+ * BitOutputStream excends from OutputStream so that bytes can also be written.
+ * However, 1 to 7 zero-bits are padded so that byte-based I/O is always aligned
+ * to byte boundary.
+ * As long as the BitOutputStream and BitInputStream follow the same I/O pattern,
+ * bits padding is not noticable from the caller.
+ *
+ * <blockquote><pre>
+ * BitOutputStream out = new BitOutputStream(new BufferedOutputStream(new FileOutputStream("foo")));
+ * out.writeBit(1); // write 1 bit: 1
+ * out.writeFixedInt(13, 4); // write 4 bits: 1101
+ * out.write(new byte [] {1,2,3}) // pad 3 zero-bits and then write 3 bytes.
+ * out.close(); // the size of file foo is now 4.
+ *
+ * BitInputStream in = new BitInputStream(new BufferedInputStream(new FileInputStream("foo")));
+ * int b = in.readBit(); // returns 1
+ * b = in.readFixedInt(4); // returns 13
+ * byte [] arr = new byte [3];
+ * in.read(arr); // returns {1,2,3}
+ * in.close();</pre></blockquote>
+ * */
 public class BitOutputStream extends OutputStream
 {
 	private OutputStream out;
@@ -8,6 +30,10 @@ public class BitOutputStream extends OutputStream
 	private int buflen;
 	private int outcount;
 
+	/** Construct a BitOutputStream using <code>out</code> as the underlying OutputStream.
+	 * Note that BitOutputStream performs single byte write operation to the underlying OutputStream,
+	 * so it is recommanded to wrap it with BufferedOutputStream.
+	 * */
 	public BitOutputStream (OutputStream out)
 	{
 		this.out = out;
@@ -158,7 +184,7 @@ public class BitOutputStream extends OutputStream
 
 	/** Write the least <i>bits</i> bits of integer <i>n</i>.
 	 * Big-endian is used.
-	 * @param 0 &le; bits &le; 31
+	 * @param bits 0 &le; bits &le; 31
 	 * */
 	public void writeFixedInt (int n, int bits) throws IOException
 	{

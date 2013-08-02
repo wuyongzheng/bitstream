@@ -1,6 +1,9 @@
 import java.io.*;
 import java.util.*;
 
+/** BitInputStream reads bits from an underlying OutputStream.
+ * See BitOutputStream for sample usage.
+ * */
 public class BitInputStream extends InputStream
 {
 	private InputStream in;
